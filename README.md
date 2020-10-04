@@ -28,7 +28,7 @@ This will install the necessary CDK, then this example's dependencies, and then 
 
 On the production AWS Account:
 1. Create an IAM Role named `CodePipelineCrossAccountRole`
-2. Create an IAM ROle named `CloudFormationDeploymentRole`
+2. Create an IAM Role named `CloudFormationDeploymentRole`
 
 ## Deploy CodeCommit Repository
 
