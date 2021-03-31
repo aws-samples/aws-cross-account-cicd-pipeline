@@ -30,6 +30,7 @@
     "@aws-cdk/core": "1.32.2",
     "@types/uuid": "7.0.2",
     "source-map-support": "^0.5.16",
-    "netmask": ">=2.0.1"
+    "netmask": ">=2.0.1",
+    "y18n": ">=4.0.1"
   }
 }
