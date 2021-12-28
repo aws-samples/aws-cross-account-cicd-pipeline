@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import { App, Stack, StackProps, RemovalPolicy, CfnOutput, CfnCapabilities } from 'aws-cdk-lib/core';
+import { App, Stack, StackProps, RemovalPolicy, CfnOutput, CfnCapabilities } from 'aws-cdk-lib';
 import { ApplicationStack } from '../lib/application-stack';
 import { Repository } from 'aws-cdk-lib/aws-codecommit';
 import { AccountPrincipal, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
