@@ -1,34 +1,34 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import codedeploy = require('@aws-cdk/aws-codedeploy');
-import lambda = require('@aws-cdk/aws-lambda');
-import apigateway = require('@aws-cdk/aws-apigateway');
-import { App, Stack, StackProps } from '@aws-cdk/core';
+import { App, Stack, StackProps } from 'aws-cdk-lib';
+import { LambdaRestApi } from 'aws-cdk-lib/aws-apigateway';
+import { LambdaDeploymentConfig, LambdaDeploymentGroup } from 'aws-cdk-lib/aws-codedeploy';
+import { Alias, CfnParametersCode, Code, Function, Runtime } from 'aws-cdk-lib/aws-lambda';
 
 export interface ApplicationStackProps extends StackProps {
   readonly stageName: string;
 }
 
 export class ApplicationStack extends Stack {
-  public readonly lambdaCode: lambda.CfnParametersCode;
+  public readonly lambdaCode: CfnParametersCode;
 
   constructor(app: App, id: string, props: ApplicationStackProps) {
     super(app, id, props);
 
-    this.lambdaCode = lambda.Code.fromCfnParameters();
+    this.lambdaCode = Code.fromCfnParameters();
 
-    const func = new lambda.Function(this, 'Lambda', {
+    const func = new Function(this, 'Lambda', {
       functionName: 'HelloLambda',
       code: this.lambdaCode,
       handler: 'index.handler',
-      runtime: lambda.Runtime.NODEJS_12_X,
+      runtime: Runtime.NODEJS_12_X,
       environment: {
         STAGE_NAME: props.stageName
       }
     });
 
-    new apigateway.LambdaRestApi(this, 'HelloLambdaRestApi', {
+    new LambdaRestApi(this, 'HelloLambdaRestApi', {
       handler: func,
       endpointExportName: 'HelloLambdaRestApiEmdpoint',
       deployOptions: {
@@ -36,15 +36,14 @@ export class ApplicationStack extends Stack {
       }
     });
 
-    const version = func.addVersion(new Date().toISOString());
-    const alias = new lambda.Alias(this, 'LambdaAlias', {
+    const alias = new Alias(this, 'LambdaAlias', {
       aliasName: props.stageName,
-      version,
+      version: func.currentVersion,
     });
 
-    new codedeploy.LambdaDeploymentGroup(this, 'DeploymentGroup', {
+    new LambdaDeploymentGroup(this, 'DeploymentGroup', {
       alias,
-      deploymentConfig: codedeploy.LambdaDeploymentConfig.ALL_AT_ONCE,
+      deploymentConfig: LambdaDeploymentConfig.ALL_AT_ONCE,
     });
 
   }
