@@ -121,6 +121,11 @@ On the production AWS Account:
             "Effect": "Allow"
         },
         {
+            "Action": "ssm:GetParameters",
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
             "Action": [
                 "s3:GetObject*",
                 "s3:GetBucket*",
