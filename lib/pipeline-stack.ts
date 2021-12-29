@@ -62,19 +62,19 @@ export class PipelineStack extends Stack {
           build: {
             commands: [
               'npm run build',
-              'npm run cdk synth -o dist'
+              'npm run cdk synth'
             ],
           },
         },
         artifacts: {
-          'base-directory': 'dist',
+          'base-directory': 'cdk.out',
           files: [
             '*ApplicationStack.template.json',
           ],
         },
       }),
       environment: {
-        buildImage: LinuxBuildImage.AMAZON_LINUX_2_ARM_2 //UBUNTU_14_04_NODEJS_10_14_1,
+        buildImage: LinuxBuildImage.AMAZON_LINUX_2_ARM_2,
       },
       encryptionKey: key
     });
