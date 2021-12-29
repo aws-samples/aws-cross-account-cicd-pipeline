@@ -1,8 +1,8 @@
 {
-  "name": "cdk",
+  "name": "repo-437437850525",
   "version": "0.1.0",
   "bin": {
-    "cdk": "bin/cdk.js"
+    "cdk": "bin/pipeline.js"
   },
   "scripts": {
     "build": "tsc",
