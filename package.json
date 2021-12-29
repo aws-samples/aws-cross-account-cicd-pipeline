@@ -2,7 +2,7 @@
   "name": "my-cdk-pipeline",
   "version": "0.1.0",
   "bin": {
-    "cdk": "bin/pipeline.ts"
+    "cdk": "bin/pipeline.js"
   },
   "scripts": {
     "build": "tsc",
