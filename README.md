@@ -122,7 +122,7 @@ On the production AWS Account:
         },
         {
             "Action": "ssm:GetParameters",
-            "Resource": "*",
+            "Resource": "*/cdk-bootstrap/hnb659fds/version*",
             "Effect": "Allow"
         },
         {
