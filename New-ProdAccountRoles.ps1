@@ -1,8 +1,9 @@
 <#
     .Synopsis
-    This is a short script to create the required roles in the Production account
+    This is a short script to create the required cross-account roles in the target (non-dev) account.
+    .Notes
+    Run in the context of the target account
 #>
-#Create cross-account role via PowerShell
 param(
     $devAccountId,
     $currentAccountId = (aws sts get-caller-identity | jq -r .Account),
@@ -20,3 +21,5 @@ $cloudAssumeRoleDoc = "{""Version"": ""2012-10-17"",""Statement"": [{""Sid"": ""
 New-IamRole -RoleName $cloudRoleName -AssumeRolePolicyDocument $cloudAssumeRoleDoc
 $cloudPolicyDoc = "{""Version"":""2012-10-17"", ""Statement"":[{""Action"":""iam:PassRole"",""Resource"":""arn:aws:iam::${currentAccountId}:role/*"",""Effect"":""Allow""},{""Action"":[""iam:GetRole"",""iam:CreateRole"",""iam:AttachRolePolicy""],""Resource"":""arn:aws:iam::${currentAccountId}:role/*"",""Effect"":""Allow""},{""Action"":""lambda:*"",""Resource"":""*"",""Effect"":""Allow""},{""Action"":""apigateway:*"",""Resource"":""*"",""Effect"":""Allow""},{""Action"":""codedeploy:*"",""Resource"":""*"",""Effect"":""Allow""},{""Action"":""ssm:GetParameters"",""Resource"":""arn:aws:ssm:*:*:parameter/cdk-bootstrap/hnb659fds/version"",""Effect"":""Allow""},{""Action"":[""s3:GetObject*"",""s3:GetBucket*"",""s3:List*""],""Resource"":[""arn:aws:s3:::artifact-bucket-${devAccountId}"",""arn:aws:s3:::artifact-bucket-${devAccountId}/*""],""Effect"":""Allow""},{""Action"":[""kms:Decrypt"",""kms:DescribeKey""],""Resource"":""${keyArn}"",""Effect"":""Allow""},{""Action"":[""cloudformation:CreateStack"",""cloudformation:DescribeStack*"",""cloudformation:GetStackPolicy"",""cloudformation:GetTemplate*"",""cloudformation:SetStackPolicy"",""cloudformation:UpdateStack"",""cloudformation:ValidateTemplate""],""Resource"":""arn:aws:cloudformation:us-east-2:${currentAccountId}:stack/ProdApplicationDeploymentStack/*"",""Effect"":""Allow""}]}"
 Write-IAMRolePolicy -RoleName $cloudRoleName -PolicyName "${cloudRoleName}Policy" -PolicyDocument $cloudPolicyDoc
+
+cdk bootstrap # required to set up the bootstrap SSM Parameter
