@@ -3,7 +3,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import { App } from '@aws-cdk/core';
+import { App } from 'aws-cdk-lib';
 import { ApplicationStack } from '../lib/application-stack';
 import { PipelineStack } from '../lib/pipeline-stack';
 import { RepositoryStack } from '../lib/repository-stack';

@@ -1,17 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import cloudformation = require('@aws-cdk/aws-cloudformation');
-import codebuild = require('@aws-cdk/aws-codebuild');
-import codecommit = require('@aws-cdk/aws-codecommit');
-import codepipeline = require('@aws-cdk/aws-codepipeline');
-import codepipeline_actions = require('@aws-cdk/aws-codepipeline-actions');
-import s3 = require('@aws-cdk/aws-s3');
-import iam = require('@aws-cdk/aws-iam');
-import kms = require('@aws-cdk/aws-kms');
-import { App, Stack, StackProps, RemovalPolicy, CfnOutput } from '@aws-cdk/core';
-
+import { App, Stack, StackProps, RemovalPolicy, CfnOutput, CfnCapabilities } from 'aws-cdk-lib';
 import { ApplicationStack } from '../lib/application-stack';
+import { Repository } from 'aws-cdk-lib/aws-codecommit';
+import { AccountPrincipal, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
+import { Key } from 'aws-cdk-lib/aws-kms';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { BucketEncryption } from 'aws-cdk-lib/aws-s3';
+import { BuildSpec, LinuxBuildImage, PipelineProject } from 'aws-cdk-lib/aws-codebuild';
+import { Artifact, Pipeline } from 'aws-cdk-lib/aws-codepipeline';
+import { CloudFormationCreateUpdateStackAction, CodeBuildAction, CodeCommitSourceAction } from 'aws-cdk-lib/aws-codepipeline-actions';
 
 export interface PipelineStackProps extends StackProps {
   readonly devApplicationStack: ApplicationStack;
@@ -25,34 +24,34 @@ export class PipelineStack extends Stack {
 
     super(app, id, props);
 
-    const repository = codecommit.Repository.fromRepositoryName(this, 'CodeCommitRepo', `repo-${this.account}`);
+    const repository = Repository.fromRepositoryName(this, 'CodeCommitRepo', `repo-${this.account}`);
 
-    const prodDeploymentRole = iam.Role.fromRoleArn(this, 'ProdDeploymentRole', `arn:aws:iam::${props.prodAccountId}:role/CloudFormationDeploymentRole`, {
+    const prodDeploymentRole = Role.fromRoleArn(this, 'ProdDeploymentRole', `arn:aws:iam::${props.prodAccountId}:role/CloudFormationDeploymentRole`, {
       mutable: false
     });
-    const prodCrossAccountRole = iam.Role.fromRoleArn(this, 'ProdCrossAccountRole', `arn:aws:iam::${props.prodAccountId}:role/CodePipelineCrossAccountRole`, {
+    const prodCrossAccountRole = Role.fromRoleArn(this, 'ProdCrossAccountRole', `arn:aws:iam::${props.prodAccountId}:role/CodePipelineCrossAccountRole`, {
       mutable: false
     });
 
-    const prodAccountRootPrincipal = new iam.AccountPrincipal(props.prodAccountId);
+    const prodAccountRootPrincipal = new AccountPrincipal(props.prodAccountId);
 
-    const key = new kms.Key(this, 'ArtifactKey', {
+    const key = new Key(this, 'ArtifactKey', {
       alias: 'key/artifact-key',
     });
     key.grantDecrypt(prodAccountRootPrincipal);
     key.grantDecrypt(prodCrossAccountRole);
 
-    const artifactBucket = new s3.Bucket(this, 'ArtifactBucket', {
+    const artifactBucket = new Bucket(this, 'ArtifactBucket', {
       bucketName: `artifact-bucket-${this.account}`,
       removalPolicy: RemovalPolicy.DESTROY,
-      encryption: s3.BucketEncryption.KMS,
+      encryption: BucketEncryption.KMS,
       encryptionKey: key
     });
     artifactBucket.grantPut(prodAccountRootPrincipal);
     artifactBucket.grantRead(prodAccountRootPrincipal);
 
-    const cdkBuild = new codebuild.PipelineProject(this, 'CdkBuild', {
-      buildSpec: codebuild.BuildSpec.fromObject({
+    const cdkBuild = new PipelineProject(this, 'CdkBuild', {
+      buildSpec: BuildSpec.fromObject({
         version: '0.2',
         phases: {
           install: {
@@ -63,24 +62,24 @@ export class PipelineStack extends Stack {
           build: {
             commands: [
               'npm run build',
-              'npm run cdk synth -- -o dist'
+              'npm run cdk synth'
             ],
           },
         },
         artifacts: {
-          'base-directory': 'dist',
+          'base-directory': 'cdk.out',
           files: [
             '*ApplicationStack.template.json',
           ],
         },
       }),
       environment: {
-        buildImage: codebuild.LinuxBuildImage.UBUNTU_14_04_NODEJS_10_14_1,
+        buildImage: LinuxBuildImage.AMAZON_LINUX_2_ARM_2,
       },
       encryptionKey: key
     });
-    const lambdaBuild = new codebuild.PipelineProject(this, 'LambdaBuild', {
-      buildSpec: codebuild.BuildSpec.fromObject({
+    const lambdaBuild = new PipelineProject(this, 'LambdaBuild', {
+      buildSpec: BuildSpec.fromObject({
         version: '0.2',
         phases: {
           install: {
@@ -102,23 +101,23 @@ export class PipelineStack extends Stack {
         },
       }),
       environment: {
-        buildImage: codebuild.LinuxBuildImage.UBUNTU_14_04_NODEJS_10_14_1,
+        buildImage: LinuxBuildImage.AMAZON_LINUX_2_ARM_2,
       },
       encryptionKey: key
     });
 
-    const sourceOutput = new codepipeline.Artifact();
-    const cdkBuildOutput = new codepipeline.Artifact('CdkBuildOutput');
-    const lambdaBuildOutput = new codepipeline.Artifact('LambdaBuildOutput');
+    const sourceOutput = new Artifact();
+    const cdkBuildOutput = new Artifact('CdkBuildOutput');
+    const lambdaBuildOutput = new Artifact('LambdaBuildOutput');
 
-    const pipeline = new codepipeline.Pipeline(this, 'Pipeline', {
+    const pipeline = new Pipeline(this, 'Pipeline', {
       pipelineName: 'CrossAccountPipeline',
       artifactBucket: artifactBucket,
       stages: [
         {
           stageName: 'Source',
           actions: [
-            new codepipeline_actions.CodeCommitSourceAction({
+            new CodeCommitSourceAction({
               actionName: 'CodeCommit_Source',
               repository: repository,
               output: sourceOutput,
@@ -128,13 +127,13 @@ export class PipelineStack extends Stack {
         {
           stageName: 'Build',
           actions: [
-            new codepipeline_actions.CodeBuildAction({
+            new CodeBuildAction({
               actionName: 'Application_Build',
               project: lambdaBuild,
               input: sourceOutput,
               outputs: [lambdaBuildOutput],
             }),
-            new codepipeline_actions.CodeBuildAction({
+            new CodeBuildAction({
               actionName: 'CDK_Synth',
               project: cdkBuild,
               input: sourceOutput,
@@ -145,7 +144,7 @@ export class PipelineStack extends Stack {
         {
           stageName: 'Deploy_Dev',
           actions: [
-            new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+            new CloudFormationCreateUpdateStackAction({
               actionName: 'Deploy',
               templatePath: cdkBuildOutput.atPath('DevApplicationStack.template.json'),
               stackName: 'DevApplicationDeploymentStack',
@@ -160,7 +159,7 @@ export class PipelineStack extends Stack {
         {
           stageName: 'Deploy_Prod',
           actions: [
-            new codepipeline_actions.CloudFormationCreateUpdateStackAction({
+            new CloudFormationCreateUpdateStackAction({
               actionName: 'Deploy',
               templatePath: cdkBuildOutput.atPath('ProdApplicationStack.template.json'),
               stackName: 'ProdApplicationDeploymentStack',
@@ -169,7 +168,7 @@ export class PipelineStack extends Stack {
                 ...props.prodApplicationStack.lambdaCode.assign(lambdaBuildOutput.s3Location),
               },
               deploymentRole: prodDeploymentRole,
-              capabilities: [cloudformation.CloudFormationCapabilities.ANONYMOUS_IAM],
+              cfnCapabilities: [CfnCapabilities.ANONYMOUS_IAM],
               extraInputs: [lambdaBuildOutput],
               role: prodCrossAccountRole,
             }),
@@ -178,7 +177,7 @@ export class PipelineStack extends Stack {
       ],
     });
 
-    pipeline.addToRolePolicy(new iam.PolicyStatement({
+    pipeline.addToRolePolicy(new PolicyStatement({
       actions: ['sts:AssumeRole'],
       resources: [`arn:aws:iam::${props.prodAccountId}:role/*`]
     }));

@@ -121,6 +121,11 @@ On the production AWS Account:
             "Effect": "Allow"
         },
         {
+            "Action": "ssm:GetParameters",
+            "Resource": "arn:aws:ssm:*:*:parameter/cdk-bootstrap/hnb659fds/version",
+            "Effect": "Allow"
+        },
+        {
             "Action": [
                 "s3:GetObject*",
                 "s3:GetBucket*",
