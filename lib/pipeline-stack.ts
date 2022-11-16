@@ -74,7 +74,7 @@ export class PipelineStack extends Stack {
         },
       }),
       environment: {
-        buildImage: LinuxBuildImage.AMAZON_LINUX_2_ARM_2,
+        buildImage: LinuxBuildImage.STANDARD_5_0,
       },
       encryptionKey: key
     });
@@ -101,7 +101,7 @@ export class PipelineStack extends Stack {
         },
       }),
       environment: {
-        buildImage: LinuxBuildImage.AMAZON_LINUX_2_ARM_2,
+        buildImage: LinuxBuildImage.STANDARD_5_0,
       },
       encryptionKey: key
     });
