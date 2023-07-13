@@ -22,7 +22,7 @@ export class ApplicationStack extends Stack {
       functionName: 'HelloLambda',
       code: this.lambdaCode,
       handler: 'index.handler',
-      runtime: Runtime.NODEJS_12_X,
+      runtime: Runtime.NODEJS_18_X,
       environment: {
         STAGE_NAME: props.stageName
       }
